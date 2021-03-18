@@ -1,0 +1,211 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "VmName": {
+            "type": "String",
+            "metadata": {
+                "description": "The Virtual Machine Name."
+            }
+        },
+        "VmLocation": {
+            "type": "String",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The Virtual Machine Location."
+            }
+        },
+        "VmResourceId": {
+            "type": "String",
+            "defaultValue": "Enter VmResourceId Here**",
+            "metadata": {
+                "description": "VM Resource ID."
+            }
+        },
+        "VmType": {
+            "type": "String",
+            "defaultValue": "virtualMachines",
+            "metadata": {
+                "description": "VM type: 1. virtualMachines, 2 virtualMachineScaleSets."
+            }
+        },
+        "OsType": {
+            "type": "String",
+            "defaultValue": "Linux",
+            "allowedValues": [
+            "Linux",
+            "Windows"
+            ],
+            "metadata": {
+                "description": "Operating System. Example Windows or Linux"
+            }
+        },
+        "DaExtensionName": {
+            "type": "String",
+            "defaultValue": "DependencyAgentLinux",
+            "metadata": {
+                "description": "The name will be Windows: DependencyAgentWindows, Linux: DependencyAgentLinux."
+            }
+        },
+        "DaExtensionType": {
+            "type": "String",
+            "defaultValue": "DependencyAgentLinux",
+            "metadata": {
+                "description": "Dependency Agent Extension Type, Windows: DependencyAgentWindows, Linux: DependencyAgentLinux."
+            }
+        },
+        "DaExtensionVersion": {
+            "type": "String",
+            "defaultValue": "9.10",
+            "metadata": {
+                "description": "Dependency Agent Extension Version."
+            }
+        },
+        "MmaAgentName": {
+            "type": "String",
+            "defaultValue": "OMSAgentForLinux",
+            "metadata": {
+                "description": "The name will be Windows: MMAExtension, Linux: OMSAgentForLinux."
+            }
+        },
+        "MmaExtensionType": {
+            "type": "String",
+            "defaultValue": "OmsAgentForLinux",
+            "metadata": {
+                "description": "MMA Extension Type, Windows: MicrosoftMonitoringAgent, Linux: OmsAgentForLinux."
+            }
+        },
+        "MmaExtensionVersion": {
+            "type": "String",
+            "defaultValue": "1.7",
+            "metadata": {
+                "description": "MMA/OMS Extension Version."
+            }
+        },
+        "WorkspaceId": {
+            "type": "String",
+            "metadata": {
+                "description": "The customerId from the json view of the workspace resource"
+            }
+        },
+        "WorkspaceResourceId": {
+            "type": "String",
+            "metadata": {
+                "description": "Workspace Resource ID. Same name under the json properties of the workspace resource"
+            }
+        },
+        "WorkspaceLocation": {
+            "type": "String",
+            "metadata": {
+                "description": "Workspace Location."
+            }
+        },
+        "OmsWorkspaceSku": {
+            "defaultValue": "perGB2018",
+            "allowedValues": [
+                "free",
+                "standalone",
+                "pernode",
+                "perGB2018"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "Select the SKU for your workspace."
+            }
+        },
+        "DeploymentNameSuffix": {
+            "type": "String",
+            "defaultValue": "DeploymentNameSuffix-",
+            "metadata": {
+                "description": "Deployment Name Suffix."
+            }
+        }
+    },
+    "variables": {
+        "workloadType": "BaseOS",
+        "resourceName": "[concat(toLower(parameters('VmName')), '_', toLower(variables('workloadType')))]",
+        "stopOnMultipleConnections": "[if(equals(toUpper(parameters('OsType')), 'WINDOWS'), 'false', 'true')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2018-10-01",
+            "name": "[parameters('VmName')]",
+            "location": "[parameters('VmLocation')]",
+            "resources": [
+                {
+                    "type": "extensions",
+                    "apiVersion": "2018-10-01",
+                    "name": "[parameters('DaExtensionName')]",
+                    "location": "[parameters('VmLocation')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Compute/', parameters('VmType'), '/', parameters('VmName'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+                        "type": "[parameters('DaExtensionType')]",
+                        "typeHandlerVersion": "[parameters('DaExtensionVersion')]",
+                        "autoUpgradeMinorVersion": true
+                    }
+                },
+                {
+                    "type": "extensions",
+                    "apiVersion": "2018-10-01",
+                    "name": "[parameters('MmaAgentName')]",
+                    "location": "[parameters('VmLocation')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Compute/', parameters('VmType'), '/', parameters('VmName'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                        "type": "[parameters('MmaExtensionType')]",
+                        "typeHandlerVersion": "[parameters('MmaExtensionVersion')]",
+                        "autoUpgradeMinorVersion": "true",
+                        "settings": {
+                            "workspaceId": "[reference(parameters('WorkspaceResourceId'), '2015-03-20').customerId]",
+                            "azureResourceId": "[parameters('VmResourceId')]",
+                            "stopOnMultipleConnections": "[variables('stopOnMultipleConnections')]"
+                        },
+                        "protectedSettings": {
+                            "workspaceKey": "[listKeys(parameters('WorkspaceResourceId'), '2015-03-20').primarySharedKey]"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "name": "[concat('VMInsightsSolutionDeployment', parameters('DeploymentNameSuffix'))]",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2015-11-01-preview",
+                            "type": "Microsoft.OperationsManagement/solutions",
+                            "location": "[parameters('WorkspaceLocation')]",
+                            "name": "[concat('VMInsights', '(', split(parameters('WorkspaceResourceId'),'/')[8], ')')]",
+                            "properties": {
+                                "workspaceResourceId": "[parameters('WorkspaceResourceId')]"
+                            },
+                            "plan": {
+                                "name": "[concat('VMInsights', '(', split(parameters('WorkspaceResourceId'),'/')[8], ')')]",
+                                "product": "[concat('OMSGallery/', 'VMInsights')]",
+                                "promotionCode": "",
+                                "publisher": "Microsoft"
+                            }
+                        }
+                    ]
+                }
+            },
+            "subscriptionId": "[split(parameters('WorkspaceResourceId'),'/')[2]]",
+            "resourceGroup": "[split(parameters('WorkspaceResourceId'),'/')[4]]"
+        }
+    ],
+    "outputs": {}
+}
