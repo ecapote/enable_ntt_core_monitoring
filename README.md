@@ -2,4 +2,4 @@
 Enables NTT core Azure  monitoring
 
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/ecapote/enable_ntt_core_monitoring/main/ntt_core_service_log_analytics.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fecapote%2Fenable_ntt_core_monitoring%2Fmain%2Fntt_core_service_log_analytics.json)
