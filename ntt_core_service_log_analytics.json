@@ -38,8 +38,7 @@
             }
         },
         "diagnosticStorageAccountId": {
-            "type": "string",
-            "defaultValue": "",
+            "type": "string"
             "metadata": {
                 "description": "Optional. Log Analytics workspace resource identifier"
             }
